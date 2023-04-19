@@ -12,7 +12,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-parquet = { version = "37.0.0", default-features = false, features = ["zstd", "lz4", "flate2", "brotli", "snap", "base64"] }
+parquet = { version = "24.0.0", default-features = false, features = ["zstd", "lz4", "flate2", "brotli", "snap", "base64"] }
 postgres = { version = "0.19.5", features = ["with-chrono-0_4", "with-serde_json-1", "with-bit-vec-0_6", "with-uuid-1", "with-geo-types-0_7", "with-eui48-1"] }
 clap = { version = "4.2.3", features = ["derive"] }
 geo-types = "0.7.9"
