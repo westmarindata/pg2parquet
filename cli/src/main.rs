@@ -1,21 +1,23 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
-use std::{sync::Arc, path::PathBuf, process};
+use std::{path::PathBuf, process, sync::Arc};
 
-use clap::{Parser, ValueEnum, Command};
-use postgres_cloner::{SchemaSettingsMacaddrHandling, SchemaSettingsJsonHandling, SchemaSettingsEnumHandling};
+use clap::{Command, Parser, ValueEnum};
+use postgres_cloner::{
+    SchemaSettingsEnumHandling, SchemaSettingsJsonHandling, SchemaSettingsMacaddrHandling,
+};
 
-mod postgresutils;
-mod myfrom;
-mod level_index;
-mod parquetinfo;
-mod playground;
 mod column_appender;
 mod column_pg_copier;
-mod parquet_row_writer;
-mod postgres_cloner;
-mod pg_custom_types;
 mod datatypes;
+mod level_index;
+mod myfrom;
+mod parquet_row_writer;
+mod parquetinfo;
+mod pg_custom_types;
+mod playground;
+mod postgres_cloner;
+mod postgresutils;
 
 #[cfg(not(any(target_family = "windows", target_arch = "riscv64")))]
 use jemallocator::Jemalloc;
@@ -25,7 +27,6 @@ use crate::postgres_cloner::SchemaSettings;
 #[cfg(not(any(target_family = "windows", target_arch = "riscv64")))]
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
-
 
 #[derive(Parser, Debug, Clone)]
 #[command(name = "pg2parquet")]
@@ -38,7 +39,7 @@ enum CliCommand {
     PlaygroundCreateSomething(PlaygroundCreateSomethingArgs),
     /// Exports a PostgreSQL table or query to a Parquet file
     #[command(arg_required_else_help = true)]
-    Export(ExportArgs)
+    Export(ExportArgs),
 }
 
 #[derive(clap::Args, Debug, Clone)]
@@ -64,14 +65,14 @@ struct ExportArgs {
 #[derive(clap::Args, Debug, Clone)]
 pub struct PostgresConnArgs {
     /// Database server host
-    #[arg(short='H', long)]
+    #[arg(short = 'H', long)]
     host: String,
     /// Database user name. If not specified, PGUSER environment variable is used.
-    #[arg(short='U', long)]
+    #[arg(short = 'U', long)]
     user: Option<String>,
-    #[arg(short='d', long)]
+    #[arg(short = 'd', long)]
     dbname: String,
-    #[arg(short='p', long)]
+    #[arg(short = 'p', long)]
     port: Option<u16>,
     /// Password to use for the connection. It is recommended to use the PGPASSWORD environment variable instead, since process arguments are visible to other users on the system.
     #[arg(long)]
@@ -85,21 +86,28 @@ pub struct SchemaSettingsArgs {
     macaddr_handling: SchemaSettingsMacaddrHandling,
     /// How to handle `json` and `jsonb` columns
     #[arg(long, hide_short_help = true, default_value = "text")]
-	json_handling: SchemaSettingsJsonHandling,
-    /// How to handle enum (Enumerated Type) columns 
+    json_handling: SchemaSettingsJsonHandling,
+    /// How to handle enum (Enumerated Type) columns
     #[arg(long, hide_short_help = true, default_value = "text")]
     enum_handling: SchemaSettingsEnumHandling,
     /// How many decimal digits after the decimal point are stored in the Parquet file
     #[arg(long, hide_short_help = true, default_value_t = 18)]
-	decimal_scale: i32,
+    decimal_scale: i32,
     /// How many decimal digits are allowed in numeric/DECIMAL column. By default 38, the largest value which fits in 128 bits.
     #[arg(long, hide_short_help = true, default_value_t = 38)]
-	decimal_precision: u32,
+    decimal_precision: u32,
 }
 
-
 #[derive(ValueEnum, Debug, Clone)]
-enum ParquetCompression { None, Snappy, Gzip, Lzo, Brotli, Lz4, Zstd }
+enum ParquetCompression {
+    None,
+    Snappy,
+    Gzip,
+    Lzo,
+    Brotli,
+    Lz4,
+    Zstd,
+}
 
 #[derive(clap::Args, Debug, Clone)]
 // #[command(author, version, about, long_about = None)]
@@ -145,12 +153,11 @@ fn perform_export(args: ExportArgs) {
         Some(ParquetCompression::Lz4) => parquet::basic::Compression::LZ4,
         Some(ParquetCompression::Snappy) => parquet::basic::Compression::SNAPPY,
         Some(ParquetCompression::Zstd) => parquet::basic::Compression::ZSTD,
-        Some(ParquetCompression::None) => parquet::basic::Compression::UNCOMPRESSED
+        Some(ParquetCompression::None) => parquet::basic::Compression::UNCOMPRESSED,
     };
-    let props =
-        parquet::file::properties::WriterProperties::builder()
-            .set_compression(compression)
-            .set_created_by("pg2parquet".to_owned())
+    let props = parquet::file::properties::WriterProperties::builder()
+        .set_compression(compression)
+        .set_created_by("pg2parquet".to_owned())
         .build();
     let props = Arc::new(props);
 
@@ -161,13 +168,17 @@ fn perform_export(args: ExportArgs) {
         decimal_scale: args.schema_settings.decimal_scale,
         decimal_precision: args.schema_settings.decimal_precision,
     };
-    let query = args.query.unwrap_or_else(|| {
-        format!("SELECT * FROM {}", args.table.unwrap())
-    });
-    let result = postgres_cloner::execute_copy(&args.postgres, &query, &args.output_file, props, &settings);
+    let query = args
+        .query
+        .unwrap_or_else(|| format!("SELECT * FROM {}", args.table.unwrap()));
+    let result =
+        postgres_cloner::execute_copy(&args.postgres, &query, &args.output_file, props, &settings);
     let stats = handle_result(result);
 
-    eprintln!("Wrote {} rows, {} bytes of raw data in {} groups", stats.rows, stats.bytes, stats.groups);
+    eprintln!(
+        "Wrote {} rows, {} bytes of raw data in {} groups",
+        stats.rows, stats.bytes, stats.groups
+    );
 }
 
 fn parse_args() -> CliCommand {
@@ -181,11 +192,11 @@ fn main() {
         CliCommand::ParquetInfo(args) => {
             eprintln!("parquet file: {:?}", args.parquet_file);
             parquetinfo::print_parquet_info(&args.parquet_file);
-        },
+        }
         CliCommand::PlaygroundCreateSomething(args) => {
             eprintln!("parquet file: {:?}", args.parquet_file);
             playground::create_something(&args.parquet_file);
-        },
+        }
         CliCommand::Export(args) => {
             perform_export(args);
         }
