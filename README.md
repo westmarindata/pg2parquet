@@ -1,5 +1,10 @@
 # PostgreSQL -> Parquet
 
+This is a for of [exyi/pg2parquet](https://github.com/exyi/pg2parquet) with updated dependencies, it also removed some of the
+old dotnet code.
+
+-----
+
 Simple tool for exporting PostgreSQL tables into parquet, with support for more esoteric Postgres features than just `int` and `text`.
 
 ## Installation
